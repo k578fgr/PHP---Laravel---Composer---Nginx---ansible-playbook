@@ -2,7 +2,7 @@
 PHP 7.2
 Laravel
 Composer
-ansible
+Ansible
 
 
 # Startup
