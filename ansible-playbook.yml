@@ -8,8 +8,8 @@
     app_path: /var/www/{{ app_name }}
     app_env: production
     app_debug: false
-    app_domain: cuckuru.local
-    app_url: http://cuckuru.local
+    app_domain: example.local
+    app_url: http://example.local
     app_version: master
 
 
