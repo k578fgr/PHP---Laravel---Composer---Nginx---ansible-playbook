@@ -1,0 +1,125 @@
+- name: Deploy Laravel Application
+  hosts: localhost
+  become: true
+
+  vars:
+    # Переменные для настройки приложения Laravel
+    app_name: travellist
+    app_path: /var/www/{{ app_name }}
+    app_env: production
+    app_debug: false
+    app_domain: cuckuru.local
+    app_url: http://cuckuru.local
+    app_version: master
+
+
+  tasks:
+    - name: Update apt cache
+      become: yes
+      apt:
+        update_cache: yes
+
+    - name: Install NGINX
+      become: yes
+      apt:
+        name: nginx
+        state: latest
+        update_cache: yes
+
+    - name: Configure NGINX
+      become: yes
+      template:
+        src: templates/nginx.conf.j2
+        dest: /etc/nginx/sites-available/{{ app_name }}
+
+
+    #- name: Restart NGINX
+      #become: true
+      #systemd:
+        #name: nginx
+        #state: restarted
+
+    - name: Enable NGINX Site
+      become: yes
+      file:
+        src: /etc/nginx/sites-available/{{ app_name }}
+        dest: /etc/nginx/sites-enabled/{{ app_name }}
+        state: link
+
+    - name: PHP | Install Ondrej PHP PPA
+      become: yes
+      apt_repository:
+        repo: 'ppa:ondrej/php'
+        update_cache: yes
+
+    - name: PHP | Install PHP 7.2
+      become: yes
+      apt:
+        pkg: php7.2
+        state: latest
+      tags: ['common']
+
+    - name: PHP | Install PHP Modules
+      become: yes
+      apt:
+        pkg: "{{ item }}"
+        state: latest
+      tags: ['common']
+      with_items:
+        - php7.2-cli
+        - php7.2-curl
+        - php7.2-mysql
+        - php7.2-fpm
+        - php7.2-mbstring
+        - php7.2-xml
+
+
+    - name: Validate Composer checksum
+      get_url:
+        checksum: "sha384:55ce33d7678c5a611085589f1f3ddf8b3c52d662cd01d4ba75c0ee0459970c2200a51f492d557530c71c15d8dba01eae"
+        dest: /usr/src/
+        url: https://getcomposer.org/installer
+      become: yes
+
+    - name: Download and install Composer
+      shell: curl -sS https://getcomposer.org/installer | php
+      args:
+        chdir: /usr/src/
+        creates: /usr/local/bin/composer
+        warn: false
+      become: yes
+
+    - name: Add Composer to global path
+      copy: 
+        dest: /usr/local/bin/composer.phar
+        group: root
+        mode: '0755'
+        owner: root
+        src: /usr/src/composer.phar
+        remote_src: yes
+      become: yes
+
+    - name: rename composer executable
+      shell: mv /usr/local/bin/composer.phar /usr/local/bin/composer
+      become: yes
+
+    - name: set permissions for composer file
+      file:
+        path: /usr/local/bin/composer
+        mode: a+x
+        state: file
+      become: yes
+
+    - name: Add domain to hosts file
+      become: yes
+      lineinfile:
+        path: /etc/hosts
+        line: "127.0.0.1    {{ app_domain }}"
+
+
+    - name: Deploy Laravel Application
+      become: yes
+      git:
+        repo: https://github.com/laravel/laravel.git
+        dest: "{{ app_path }}"
+        version: "{{ app_version }}"
