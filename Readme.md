@@ -1,7 +1,12 @@
 # Stack
+Ubuntu 20.04
+
 PHP 7.2
+
 Laravel
+
 Composer
+
 Ansible
 
 
